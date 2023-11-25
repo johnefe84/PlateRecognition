@@ -1,4 +1,4 @@
-# PlateRecognition
+# Car Plate Recognition System
 Software car plate recognition
 
 This is the code I did as the thesis to request my bachelor's degree in Engineering of Systems in Bogota Colombia at the Francisco Jose de Caldas University.
