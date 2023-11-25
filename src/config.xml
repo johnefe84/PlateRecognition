@@ -1,0 +1,10 @@
+<data>
+	<camara name='entrada'>
+			<tipo>CCTV</tipo>
+			<direccion>0</direccion>
+	</camara>
+	<camara name='salida'>
+			<tipo>IP</tipo>
+			<direccion>http://192.168.169.101:8080/video</direccion>
+	</camara>
+</data>
