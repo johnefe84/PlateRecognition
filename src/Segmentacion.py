@@ -11,23 +11,23 @@ import cv2
 def binarizar(imagen_gris):
     #ret,imagen_binaria = cv2.threshold(imagen_gris,0,1,cv2.THRESH_BINARY)
     #imagen_binaria = cv2.adaptiveThreshold(imagen_gris,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
-    ret,imagen_binaria = cv2.threshold(imagen_gris,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    ret,imagen_binaria = cv2.threshold(imagen_gris,100,255,cv2.THRESH_OTSU)
     return imagen_binaria
 
-def Segmentar(FOTO,ancho,alto):
+def Segmentar(FOTO,ancho,alto,FotoOriginal):
     tic = time.time() 
-    colorDetectado= detectarReflectivo(FOTO)
-    #colorDetectado= binarizar(FOTO)
-    FOTOriginal=colorDetectado;                
+    #colorDetectado= detectarReflectivo(FOTO)
+    imagenBinaria = binarizar(FOTO)
+    #FOTOriginal=colorDetectado;                
     kernel = np.ones((5,5),np.uint8)
-    colorDetectado= cv2.dilate(colorDetectado,kernel,iterations = 3)
-    colorDetectado= cv2.erode(colorDetectado,kernel,iterations = 3)
+    #colorDetectado= cv2.dilate(colorDetectado,kernel,iterations = 3)
+    #colorDetectado= cv2.erode(colorDetectado,kernel,iterations = 3)
     print ("voy a buscar patron")
-    resultado, placaDetectada,tiempoProcesamiento1=Patron.buscarPatron(colorDetectado,FOTO,ancho,alto);
+    resultado, placaDetectada,tiempoProcesamiento1=Patron.buscarPatron(imagenBinaria,FOTO,ancho,alto,FotoOriginal);
     #placaDetectada=mejorarFoto(placaDetectada,ancho,alto)
-    placaDetectada=binarizar(placaDetectada)
+    #placaDetectada=binarizar(placaDetectada)
     tiempoProcesamiento0=time.time() - tic; 
-    return resultado, placaDetectada, colorDetectado, tiempoProcesamiento0
+    return resultado, placaDetectada, imagenBinaria, tiempoProcesamiento0
 
 
 def transformar(FOTO,ancho,alto,pts1,pts2):
@@ -56,7 +56,7 @@ def mejorarFoto(FOTO,ancho,alto):
 
 def detectarReflectivo(imagen_gris):
     colorDetectado=cv2.inRange(imagen_gris,165,255)
-    #cv2.imshow('colorDetectado',colorDetectado)
+    #cv2.imshow('detectarReflectivo',colorDetectado)
     #cv2.waitKey(10) 
     return colorDetectado
     

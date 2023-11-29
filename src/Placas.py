@@ -114,11 +114,11 @@ class Placas():
         
         return identificado,tiempo,promedioGlobal,apagar,mensaje,resultadoDI,saludo_propietario,minutos_pagar
     
-    def ProcesarImagen(self,foto,ancho,alto,tipoCamara,usuario,samplesl,responsesl,samplesn,responsesn,visitantesinregistro,pletras,pnumeros):
+    def ProcesarImagen(self,fotoGris,ancho,alto,tipoCamara,usuario,samplesl,responsesl,samplesn,responsesn,visitantesinregistro,pletras,pnumeros, FotoOriginal):
         #foto=cv2.resize(foto,(320,240))
         #ancho=foto.240
         #alto=320
-        tam=foto.shape
+        tam=fotoGris.shape
         ancho=tam[0]
         alto=tam[1]
         threads2 = list()
@@ -127,7 +127,7 @@ class Placas():
         promedioGlobal='0.0'
         apagar='0'
         saludo_propietario=''
-        placaDetectada=foto
+        placaDetectada=fotoGris
         tiempo_total=0
         grosorvertical=8
         resultado = 0
@@ -135,10 +135,10 @@ class Placas():
         
         #Ingresa 2 veces, la primera con un grosorvertical=8 y el segundo=16
         for paso in range(1,3):
-            resultado, placaDetectada, colorDetectado, tiempoProcesamiento1=Segmentacion.Segmentar(foto,ancho,alto)
+            resultado, placaDetectada, colorDetectado, tiempoProcesamiento1=Segmentacion.Segmentar(fotoGris,ancho,alto, FotoOriginal)
             if resultado == 1:
                 print ("placa detectada")
-                caracteres_detectados,tiempo,promedioGlobal,apagar,mensaje,resultado,saludo_propietario,minutos_pagar=self.evaluarPlacaDetectada(placaDetectada,tiempoProcesamiento1,foto,tipoCamara,usuario,samplesl,responsesl,samplesn,responsesn,visitantesinregistro,pletras,pnumeros)
+                caracteres_detectados,tiempo,promedioGlobal,apagar,mensaje,resultado,saludo_propietario,minutos_pagar=self.evaluarPlacaDetectada(placaDetectada,tiempoProcesamiento1,fotoGris,tipoCamara,usuario,samplesl,responsesl,samplesn,responsesn,visitantesinregistro,pletras,pnumeros)
                 tiempo4=time.time() - tic;
                 #paso=3 para salir del for 
                 break

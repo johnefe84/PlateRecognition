@@ -7,6 +7,28 @@ import numpy
 import time
 import cv2
 import Segmentacion
+import math
+
+"""
+_0_|x1______x2_
+ y1|
+   |
+   |
+ y2|
+"""
+
+def procesarRegionParaHallarPosiblesLetras(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy):
+    objetoCandidato=0
+    try:
+        relacionAspecto = (y2-y1)/(x2-x1)
+        area=(y2-y1)*(x2-x1)
+
+        if(relacionAspecto >= 0.4 and relacionAspecto <= 0.6 and area/total_pixeles >= 0.0001 and area/total_pixeles <= 0.8):
+            objetoCandidato = relacionAspecto;
+        
+    except Exception as e:
+        print ('Error: '+str(e))
+    return objetoCandidato
 
 def procesarRegion(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy):
     #obtengo los centroides del objeto
@@ -23,53 +45,53 @@ def procesarRegion(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy):
         
         area1=(y2-y1)*(x2-x1)
         #print ('area1: '+ str(area1))
-        if area1 > 7000: 
-            #print ('area1: '+ str(area1))
-            #Utilizo el teorema de pitagoras para hallar una hipotenusa (a)
-            cateto_x=(x2-cx)
-            cateto_y=(y2-cy)
-            hipotenusa=(cateto_x**2 + cateto_y**2)**(0.5)
-            #hipotenusa=int(round(hipotenusa))
-            area2 = cv2.contourArea(borde_placa)
-            'cateto_x es la distancia entre el borde izquierdo de la placa y el centroide'
-            #if hipotenusa > mitad_placa :
-            zona=round(round(area2)*100/total_pixeles)
-            #divido el area entre el area calculada, si da 1 es por que son iguales
-            #area 3 es lado x lado pero utilizando pitagoras. Ver tesis pagina 66
-            #print ('hipotenusa: '+ str(hipotenusa)+' cateto_x: '+str(cateto_x))
-            if hipotenusa > cateto_x:
-                area3=int(4*cateto_x*((hipotenusa**2-cateto_x**2)**0.5))
-                #print ('area3: '+ str(area3)+' area2: '+ str(area2)+' area3: '+ str(area1)+' zona : '+ str(zona))
-                'Si la similitud entre el area3 y el area2 es mayor al 70% entonces avanza'
-                similitud0=abs(round(round(area3*100)/area2))
-                #zona el que % ocupa la imagen en toda la foto
-                #0.48 es la relacion perfecta de una placa real
-                #proporcion es el % de similtud entre la relacion de aspecto 
-                #de la placa contra el ideal
-                proporcion=abs((0.48 *100)/relacionAspecto)
-                #similitud es que tanto se parecen las 2 areas
-                #calculadas con diferentes metodos
-                similitud1=abs(round(round(area2*100)/area2))
-                similitud2=abs(round(round(area1*100)/area2))
+        #if area1 > 7000: 
+        #print ('area1: '+ str(area1))
+        #Utilizo el teorema de pitagoras para hallar una hipotenusa (a)
+        cateto_x=(x2-cx)
+        cateto_y=(y2-cy)
+        hipotenusa=(cateto_x**2 + cateto_y**2)**(0.5)
+        #hipotenusa=int(round(hipotenusa))
+        area2 = cv2.contourArea(borde_placa)
+        'cateto_x es la distancia entre el borde izquierdo de la placa y el centroide'
+        #if hipotenusa > mitad_placa :
+        zona=round(round(area2)*100/total_pixeles)
+        #divido el area entre el area calculada, si da 1 es por que son iguales
+        #area 3 es lado x lado pero utilizando pitagoras. Ver tesis pagina 66
+        #print ('hipotenusa: '+ str(hipotenusa)+' cateto_x: '+str(cateto_x))
+        if hipotenusa > cateto_x:
+            area3=int(4*cateto_x*((hipotenusa**2-cateto_x**2)**0.5))
+            #print ('area3: '+ str(area3)+' area2: '+ str(area2)+' area3: '+ str(area1)+' zona : '+ str(zona))
+            'Si la similitud entre el area3 y el area2 es mayor al 70% entonces avanza'
+            similitud0=abs(round(round(area3*100)/area2))
+            #zona el que % ocupa la imagen en toda la foto
+            #0.48 es la relacion perfecta de una placa real (la placa colombiana mide oficialmente 330 mmm de largo por 16 mm de ancho) 160/330=0.48 
+            #proporcion es el % de similtud entre la relacion de aspecto 
+            #de la placa contra el ideal
+            proporcion=abs((0.48 *100)/relacionAspecto)
+            #similitud es que tanto se parecen las 2 areas
+            #calculadas con diferentes metodos
+            similitud1=abs(round(round(area2*100)/area2))
+            similitud2=abs(round(round(area1*100)/area2))
+            #print('Proporcion alto x ancho= ' +str(proporcion));
+            #print('Area 3 lado por lado= ' +str(area3));
+            #print('Area 2 count area pixeles= ' +str(area2));
+            #print('Zona area2 / total pixeles= ' +str(zona));
+            #print('similitud =' +str(similitud));     
+            #print('similitud =' +str(similitud2));
+            #print('total pixeles =' +str(total_pixeles)); 
+            #zonaDetectada=colorDetectadoOri[x1:x2, y1:y2]
+            #numpy.savetxt("zona_detectada"+str(posicion)+".csv",  zonaDetectada, delimiter=",",fmt="%d") 
+            
+            if proporcion >= 90 and similitud1 >= 85 and similitud1 <= 100 and similitud2 >= 70 and similitud2 <= 100 and zona >= 2:
+                objetoCandidato=proporcion+similitud1+similitud2+similitud0
+                #print('patron encontrado')
                 #print('Proporcion alto x ancho= ' +str(proporcion));
-                #print('Area 3 lado por lado= ' +str(area3));
+                #print('Area 1 lado por lado= ' +str(area));
                 #print('Area 2 count area pixeles= ' +str(area2));
                 #print('Zona area2 / total pixeles= ' +str(zona));
-                #print('similitud =' +str(similitud));     
-                #print('similitud =' +str(similitud2));
-                #print('total pixeles =' +str(total_pixeles)); 
-                #zonaDetectada=colorDetectadoOri[x1:x2, y1:y2]
-                #numpy.savetxt("zona_detectada"+str(posicion)+".csv",  zonaDetectada, delimiter=",",fmt="%d") 
-                
-                if proporcion >= 90 and similitud1 >= 85 and zona >= 1.8 and similitud2 >= 70:
-                    objetoCandidato=proporcion+similitud1+zona+similitud2+similitud0
-                    #print('patron encontrado')
-                    #print('Proporcion alto x ancho= ' +str(proporcion));
-                    #print('Area 1 lado por lado= ' +str(area));
-                    #print('Area 2 count area pixeles= ' +str(area2));
-                    #print('Zona area2 / total pixeles= ' +str(zona));
-                    #print('ladoxlado =' +str(ladoxlado));     
-                    #print('total pixeles =' +str(total_pixeles));                  
+                #print('lado x lado =' +str(ladoxlado));     
+                #print('total pixeles =' +str(total_pixeles));                  
     except Exception as e:
         print ('Error: '+str(e))
     return objetoCandidato
@@ -198,7 +220,7 @@ def buscar_parejaY(coordenadaY,box):
     return valorX
 
             
-def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
+def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
     tic = time.time()          
     resultado=0
     coordenadas=numpy.zeros((1,4,2))
@@ -215,12 +237,18 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
         #hierarchy =[Next, Previous, First_Child, Parent]
         #http://opencvpython.blogspot.com/2013/01/contours-5-hierarchy.html
     try:
-        cv2.imshow('colorDetectado',colorDetectado)
-
-        Boundaries,hierarchy = cv2.findContours(colorDetectado,cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.imshow('buscarPatron:imagenBinaria',imagenBinaria)
+        Boundaries,hierarchy = cv2.findContours(imagenBinaria,cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        
+        #for c in Boundaries:
+        #    x,y,w,h = cv2.boundingRect(c)
+        #    cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
+        #    cv2.imshow('Bounding Rectangle', FotoOriginal)
+        #cv2.waitKey(0) 
         cantidad_objetos = 0
         if hierarchy.shape[1] > 0:
             cantidad_objetos=hierarchy.shape[1]
+
         else:
             cantidad_objetos=0
 
@@ -228,7 +256,8 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
         print('Error findContours : '+str(e))
     # estadistica almacena el area y centroide de cada region
     if len(Boundaries)>0:
-        objetosCandidatos=numpy.zeros((cantidad_objetos,1,1),numpy.uint8);
+        objetosCandidatos = numpy.zeros((cantidad_objetos,1,1),numpy.int32);
+        objetoEncontrado = False
         while posicion != cantidad_objetos:
             continuar = True
             borde_placa = Boundaries[posicion];
@@ -255,13 +284,22 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
                 continuar = False
 
             if continuar: 
-                objetoCandidato=procesarRegion(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
+                objetoCandidato=procesarRegionParaHallarPosiblesLetras(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
+                #objetoCandidato=procesarRegion(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
 
                 if objetoCandidato != 0:
+                    objetoEncontrado = True
                     print("objetoCandidato ok ",objetoCandidato)
-                    objetosCandidatos[posicion]=objetoCandidato
+                    objetosCandidatos[posicion]=posicion
+
 
             posicion=posicion+1
+        #Nuevo metodo para ver si los objetos candidatos esta cerca de otro sobre una linea horizontal o inclinada, asi encontrare los
+        #que estan cerca y que deben ser los caracteres
+        if (objetoEncontrado):
+            calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOriginal)
+
+
         #Analisis de todos los candidatos para determinar el mejor
         valorMaximo=max(objetosCandidatos)
         candidatoMax=list(objetosCandidatos).index(valorMaximo)
@@ -274,7 +312,7 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
             x2 = float(max(borde_placa[:,:,1]))
             resultado=1
             rect = cv2.minAreaRect(borde_placa)
-            box = cv2.cv.BoxPoints(rect)
+            box = cv2.boxPoints(rect)
             box = numpy.int0(box)
             punto1x,punto1y,punto2x,punto2y,punto3x,punto3y,punto4x,punto4y,direccion=hallar_esquinas(box,borde_placa,int(x1))
 
@@ -284,8 +322,8 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
                 placaDetectada2=Segmentacion.transformar(fotoOriginal,ancho,alto,pts1,pts2)
                 placaDetectada2=placaDetectada2[10:(punto4x-punto2x),10:(punto2y-punto1y)]  
             else:
-                placaDetectada2=fotoOriginal[x1:x2, y1:y2]    
-            #numpy.savetxt("placa_detectada1.csv",  placaDetectada2, delimiter=",",fmt="%d")
+                placaDetectada2=fotoOriginal[int(x1):int(x2), int(y1):int(y2)]    
+                #numpy.savetxt("placa_detectada1.csv",  placaDetectada2, delimiter=",",fmt="%d")
         else:
             resultado=0
             placaDetectada2=fotoOriginal
@@ -296,8 +334,8 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
     if resultado==0:
         borde_placa=numpy.zeros((2,1,2))
 
-    cv2.imshow('placaDetectada2',placaDetectada2)
-    cv2.waitKey(0)
+    #cv2.imshow('placaDetectada2',placaDetectada2)
+    #cv2.waitKey(0)
     tam=placaDetectada2.shape
     ancho=tam[0]
     alto=tam[1]
@@ -314,3 +352,35 @@ def rgb2gray(rgb):
     r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
     gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
     return gray
+
+def calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOriginal):
+    ObjetoCandidatoList = []
+    for objetoCandidato in objetosCandidatos:
+        if(objetoCandidato>0):
+            borde_placa = Boundaries[int(objetoCandidato)]
+            #en el contorno del objeto
+            y1 = float(min(borde_placa[:,:,0]))
+            y2 = float(max(borde_placa[:,:,0]))
+            x1 = float(min(borde_placa[:,:,1]))
+            x2 = float(max(borde_placa[:,:,1]))
+            hipotenusa=((x2-x1)**2 + (y2-y1)**2)**(0.5) 
+            angulo = math.acos(math.cos(1/((x2-x1)/hipotenusa)))
+            ObjetoCandidatoList.append(ObjetoCandidatoClass(int(objetoCandidato), angulo))
+            ObjetoCandidatoList.sort(key = evaluacionOrdenamiento)
+
+    for objeto in ObjetoCandidatoList:
+        if(objeto.angulo > 1):
+            x,y,w,h = cv2.boundingRect(Boundaries[objeto.posicion])
+            cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
+            cv2.putText(FotoOriginal,str(objeto.angulo) ,(x,y+h),0,0.5,(0,255,0))
+            cv2.imshow('Bounding Rectangle', FotoOriginal)
+    cv2.waitKey(0) 
+    print("termine")
+
+def evaluacionOrdenamiento(e):
+    return e.angulo
+
+class ObjetoCandidatoClass():
+    def __init__(self, posicion, angulo):
+        self.posicion = posicion
+        self.angulo = angulo
