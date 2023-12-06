@@ -6,11 +6,11 @@
     "configurations": [
         
         {
-            "name": "Python: Module",
+            "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "module": "enter-your-module-name",
-            "justMyCode": true
+            "program": "${file}",
+            "console": "integratedTerminal"
         }
     ]
 }

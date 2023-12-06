@@ -8,9 +8,10 @@ import numpy as np
 import Patron
 import cv2
 
+MOSTRAR_IMAGEN_BINARIA = True
+
 def binarizar(imagen_gris):
-    #ret,imagen_binaria = cv2.threshold(imagen_gris,0,1,cv2.THRESH_BINARY)
-    #imagen_binaria = cv2.adaptiveThreshold(imagen_gris,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+    #imagen_binaria = cv2.adaptiveThreshold(imagen_gris,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2) #esto generara muchisimos boundaries
     ret,imagen_binaria = cv2.threshold(imagen_gris,100,255,cv2.THRESH_OTSU)
     return imagen_binaria
 
@@ -20,9 +21,12 @@ def Segmentar(FOTO,ancho,alto,FotoOriginal):
     imagenBinaria = binarizar(FOTO)
     #FOTOriginal=colorDetectado;                
     kernel = np.ones((5,5),np.uint8)
-    #colorDetectado= cv2.dilate(colorDetectado,kernel,iterations = 3)
-    #colorDetectado= cv2.erode(colorDetectado,kernel,iterations = 3)
+    #imagenBinaria= cv2.dilate(imagenBinaria,kernel,iterations = 3)
+    #imagenBinaria= cv2.erode(imagenBinaria,kernel,iterations = 3)
     print ("voy a buscar patron")
+    if(MOSTRAR_IMAGEN_BINARIA):
+        cv2.imshow('buscarPatron:imagenBinaria',imagenBinaria)
+        cv2.waitKey(0)
     resultado, placaDetectada,tiempoProcesamiento1=Patron.buscarPatron(imagenBinaria,FOTO,ancho,alto,FotoOriginal);
     #placaDetectada=mejorarFoto(placaDetectada,ancho,alto)
     #placaDetectada=binarizar(placaDetectada)

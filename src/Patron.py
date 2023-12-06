@@ -17,13 +17,17 @@ _0_|x1______x2_
  y2|
 """
 
+MOSTRAR_TODOS_BORDES = False
+MOSTRAR_CANDIDATOS = False
+MOSTRAR_FINALES = True
+
 def procesarRegionParaHallarPosiblesLetras(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy):
     objetoCandidato=0
     try:
         relacionAspecto = (y2-y1)/(x2-x1)
         area=(y2-y1)*(x2-x1)
 
-        if(relacionAspecto >= 0.4 and relacionAspecto <= 0.6 and area/total_pixeles >= 0.0001 and area/total_pixeles <= 0.8):
+        if(relacionAspecto >= 0.4 and relacionAspecto <= 0.86 and area/total_pixeles >= 0.008 and area/total_pixeles <= 0.3):
             objetoCandidato = relacionAspecto;
         
     except Exception as e:
@@ -237,14 +241,16 @@ def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
         #hierarchy =[Next, Previous, First_Child, Parent]
         #http://opencvpython.blogspot.com/2013/01/contours-5-hierarchy.html
     try:
-        cv2.imshow('buscarPatron:imagenBinaria',imagenBinaria)
         Boundaries,hierarchy = cv2.findContours(imagenBinaria,cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         
-        #for c in Boundaries:
-        #    x,y,w,h = cv2.boundingRect(c)
-        #    cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
-        #    cv2.imshow('Bounding Rectangle', FotoOriginal)
-        #cv2.waitKey(0) 
+        if(MOSTRAR_TODOS_BORDES):
+            for c in Boundaries:
+                x,y,w,h = cv2.boundingRect(c)
+                cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
+                #cv2.putText(FotoOriginal,str(y) ,(x,y+h),0,0.5,(0,255,0))
+                cv2.imshow('Bounding Rectangle', FotoOriginal)
+            cv2.waitKey(0)
+
         cantidad_objetos = 0
         if hierarchy.shape[1] > 0:
             cantidad_objetos=hierarchy.shape[1]
@@ -256,7 +262,7 @@ def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
         print('Error findContours : '+str(e))
     # estadistica almacena el area y centroide de cada region
     if len(Boundaries)>0:
-        objetosCandidatos = numpy.zeros((cantidad_objetos,1,1),numpy.int32);
+        objetosCandidatos = numpy.ones((cantidad_objetos,1,1),numpy.int32)*-1;
         objetoEncontrado = False
         while posicion != cantidad_objetos:
             continuar = True
@@ -284,26 +290,28 @@ def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
                 continuar = False
 
             if continuar: 
-                objetoCandidato=procesarRegionParaHallarPosiblesLetras(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
+                objetoCandidato = procesarRegionParaHallarPosiblesLetras(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
                 #objetoCandidato=procesarRegion(borde_placa,posicion,total_pixeles,x1,x2,y1,y2,cx,cy)
 
                 if objetoCandidato != 0:
                     objetoEncontrado = True
-                    print("objetoCandidato ok ",objetoCandidato)
-                    objetosCandidatos[posicion]=posicion
+                    #print("objetoCandidato ok ",objetoCandidato)
+                    objetosCandidatos[posicion] = posicion
 
 
             posicion=posicion+1
         #Nuevo metodo para ver si los objetos candidatos esta cerca de otro sobre una linea horizontal o inclinada, asi encontrare los
         #que estan cerca y que deben ser los caracteres
-        if (objetoEncontrado):
-            calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOriginal)
+        #if (objetoEncontrado):
+        #    calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOriginal)
 
 
         #Analisis de todos los candidatos para determinar el mejor
-        valorMaximo=max(objetosCandidatos)
-        candidatoMax=list(objetosCandidatos).index(valorMaximo)
-            
+        #valorMaximo=max(objetosCandidatos)
+        #candidatoMax=list(objetosCandidatos).index(valorMaximo)
+        elementosFinales = metricasCaracter(Boundaries, objetosCandidatos, FotoOriginal)    
+        
+        """"
         if candidatoMax>=0 and len(objetosCandidatos)>0 and valorMaximo > 0: 
             borde_placa= Boundaries[candidatoMax];
             y1 = float(min(borde_placa[:,:,0]))
@@ -327,6 +335,8 @@ def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
         else:
             resultado=0
             placaDetectada2=fotoOriginal
+        """
+        placaDetectada2=fotoOriginal
     else:
         resultado=0
         placaDetectada2=fotoOriginal
@@ -345,6 +355,74 @@ def buscarPatron(imagenBinaria,fotoOriginal,ancho,alto, FotoOriginal):
     tiempoProcesamiento1=time.time() - tic; 
     return resultado, placaDetectada2, tiempoProcesamiento1
 
+def metricasCaracter(Boundaries, objetosCandidatos, FotoOriginal):
+    anchoTotalImagen = FotoOriginal.shape[1]
+    alturaTotalImagen = FotoOriginal.shape[0]
+    """
+    box coordenadas empieza en esquina superior izquierda y avanza en sentido horario x,y
+    1--2
+    |  |
+    4--3
+    """
+    metricasCaracterList=[]
+    elementosABorrar=[]
+    elementosFinales=[]
+
+    for objetoCandidato in objetosCandidatos:
+        if(objetoCandidato[0][0] > 0):
+            borde_caracter = Boundaries[int(objetoCandidato)]            
+            #rect = cv2.minAreaRect(borde_caracter)
+            #box = cv2.boxPoints(rect)
+            x,y,ancho,alto = cv2.boundingRect(borde_caracter)
+            porcentajeDistanciaBordeInferiorImagen = (alturaTotalImagen-alto/alturaTotalImagen)*100
+            metricasCaracterList.append(CaracterMetricas(ancho, alto, False, porcentajeDistanciaBordeInferiorImagen, list(objetosCandidatos).index(objetoCandidato),x,(x+ancho),y,(y+alto)))
+    
+    metricasCaracterList.sort(key = evaluacionOrdenamiento2)
+    for index in range(0,len(metricasCaracterList)-1):
+        if(index==3):
+            print("parar")
+        metrica = metricasCaracterList[index]
+        filtrados = list(filter(lambda b: (b.ancho <= metrica.ancho*1.5), metricasCaracterList))
+        metricasCaracterList[index].hayMasIgualAnchos = len(filtrados)
+        filtrados = list(filter(lambda b: (b.alto <= metrica.alto*1.5), metricasCaracterList))
+        metricasCaracterList[index].hayMasIgualAltos = len(filtrados)
+        filtrados = list(filter(lambda b: (b.porcentajeDistanciaBordeInferiorImagen*1.1 >= (metrica.porcentajeDistanciaBordeInferiorImagen)), metricasCaracterList))
+        metricasCaracterList[index].hayMasSimilarUbicacionY = len(filtrados)
+        existeCaracterAlaDerecha= (metrica.x1*1,3 <= metricasCaracterList[index+1].x2)
+        metricasCaracterList[index].boundarieXContiguo = existeCaracterAlaDerecha
+        filtrados = list(filter(lambda b: ((metrica.x1 < b.x1) and (metrica.x2 > b.x2) and (metrica.y1 < b.y1) and (metrica.y2 > b.y2)), metricasCaracterList))
+        metricasCaracterList[index].tieneCaracteresPorDentro = filtrados
+
+    for index in range(0,len(metricasCaracterList)):
+        metrica = metricasCaracterList[index]
+        if(metrica.posicionArray==1804):
+            print("parar debug")
+        if(metrica.x1 == 0 or metrica.x2 == anchoTotalImagen-1 or metrica.y1 == 0 or metrica.y2 == alturaTotalImagen-1):
+            elementosABorrar.append(metrica.posicionArray)
+        if(metrica.hayMasIgualAnchos < 4 and metrica.hayMasIgualAltos < 4 and metrica.boundarieXContiguo == False and metrica.hayMasSimilarUbicacionY < 4):
+            elementosABorrar.append(metrica.posicionArray)
+        for elemento in metrica.tieneCaracteresPorDentro:
+            elementosABorrar.append(elemento.posicionArray)            
+
+    for index in range(0, len(metricasCaracterList)):
+        elemento = metricasCaracterList[index]
+        encontrado = False
+        for b in elementosABorrar:
+            if b == elemento.posicionArray:
+                encontrado = True
+        if(encontrado == False):
+            elementosFinales.append(elemento)
+
+    if (MOSTRAR_FINALES):
+        for index in range(0, len(elementosFinales)):
+            objeto = elementosFinales[index]
+            x,y,w,h = cv2.boundingRect(Boundaries[objeto.posicionArray])
+            cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
+            cv2.putText(FotoOriginal,str(objeto.posicionArray) ,(x,y+h),0,0.5,(0,255,0))
+            cv2.imshow('Bounding Rectangle', FotoOriginal)
+        cv2.waitKey(0) 
+    return elementosFinales
+
 def validacion(arreglo):
     return numpy.sum(arreglo, axis=1)
 
@@ -356,7 +434,7 @@ def rgb2gray(rgb):
 def calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOriginal):
     ObjetoCandidatoList = []
     for objetoCandidato in objetosCandidatos:
-        if(objetoCandidato>0):
+        if(objetoCandidato[0][0] > 0):
             borde_placa = Boundaries[int(objetoCandidato)]
             #en el contorno del objeto
             y1 = float(min(borde_placa[:,:,0]))
@@ -365,22 +443,147 @@ def calcularAnguloDiagonalConRespectoEjeX(Boundaries,objetosCandidatos,FotoOrigi
             x2 = float(max(borde_placa[:,:,1]))
             hipotenusa=((x2-x1)**2 + (y2-y1)**2)**(0.5) 
             angulo = math.acos(math.cos(1/((x2-x1)/hipotenusa)))
-            ObjetoCandidatoList.append(ObjetoCandidatoClass(int(objetoCandidato), angulo))
+            ObjetoCandidatoList.append(ObjetoCandidatoClass(int(objetoCandidato), angulo, x1, y1))
             ObjetoCandidatoList.sort(key = evaluacionOrdenamiento)
 
+    #lineas = caclularLineas(ObjetoCandidatoList)
+    i = 0
+    """
+        self.ancho = ancho
+        self.alto = alto
+        self.tieneCaracteresPorDentro = []
+        self.boundarieXContiguo = boundarieXContiguo
+        self.porcentajeDistanciaBordeInferiorImagen = porcentajeDistanciaBordeInferiorImagen
+        self.posicionArray = posicionArray
+        self.hayMasIgualAnchos = 0
+        self.hayMasIgualAltos = 0
+        self.hayMasSimilarUbicacionY = 0
+        self.x1 = x1
+        self.x2 = x2
+        self.y1 = y1
+        self.y2 = y2
+    """
     for objeto in ObjetoCandidatoList:
-        if(objeto.angulo > 1):
+        #if((i+2) < len(ObjetoCandidatoList)):
+            #esLinear = collinear(ObjetoCandidatoList[i],ObjetoCandidatoList[i+1],ObjetoCandidatoList[i+2])
+            #print(esLinear)
+            #if(esLinear):
+        if(MOSTRAR_CANDIDATOS):
             x,y,w,h = cv2.boundingRect(Boundaries[objeto.posicion])
             cv2.rectangle(FotoOriginal, (x, y), (x+w, y+h), (255, 0, 255), 2)
-            cv2.putText(FotoOriginal,str(objeto.angulo) ,(x,y+h),0,0.5,(0,255,0))
+            #cv2.putText(FotoOriginal,str(len(objeto.angulo)) ,(x,y+h),0,0.5,(0,255,0))
             cv2.imshow('Bounding Rectangle', FotoOriginal)
-    cv2.waitKey(0) 
+        i = i+1
+        cv2.waitKey(0) 
+    
     print("termine")
 
 def evaluacionOrdenamiento(e):
-    return e.angulo
+    return e.coordenada[1]
+
+def evaluacionOrdenamiento2(e):
+    return e.x1
+
+# get the y=mx+c equation from given points
+def get_slope_and_intercept(pointA, pointB):
+    slope = (pointB[1] - pointA[1])/(pointB[0] - pointA[0])
+    intercept = pointB[1] - slope * pointB[0]
+    return slope, intercept
+
+# a simple algorithm to find the hash of slope and intercept
+def get_unique_id(slope, intercept):
+    return str(slope)+str(intercept)
+
+def caclularLineas(pointsWithObjects):
+    points = []
+    for objeto in pointsWithObjects:
+        points.append(objeto.coordenada)    
+    
+    lines = []
+    hash_table = []
+    for A in pointsWithObjects:
+        for B in pointsWithObjects:
+            if A.coordenada[0] != B.coordenada[1] and A.coordenada[0] != B.coordenada[1]: #not matching the same points
+                #find the equation of line
+                slope, intercept = get_slope_and_intercept(A.coordenada, B.coordenada)
+                line = [A.coordenada, B.coordenada]
+                unique_hash = get_unique_id(slope, intercept)
+                if unique_hash not in hash_table:
+                    hash_table.append(unique_hash)
+                    for C in points:
+                        if B.coordenada[1] != C[0] and B.coordenada[1] != C[1] and A.coordenada[0] != C[0] and A.coordenada[1] != C[1]:
+                            # check if this point lies on the same line as A and B
+                            # y - mx - c = 0
+                            rhs = C[1] - slope * C[0] - intercept
+                            if rhs >= 0 and rhs <= 9:
+                                line.append(C)
+                    # finally append whatever is found to be in one line, more than 2 points
+                    if len(line) > 2:
+                        lines.append(line)
+                        #lines.append(ObjetoCandidatoClass(list(pointsWithObjects).index(valorMaximo))line)
+    print("lines")
+    print(lines)
+    return lines 
+
+def collinear(objetoCandidato1, objetoCandidato2, objetoCandidato3):
+    x1 = objetoCandidato1.coordenada[0]
+    y1 = objetoCandidato1.coordenada[1]
+    x2 = objetoCandidato2.coordenada[0]
+    y2 = objetoCandidato2.coordenada[1]
+    x3 = objetoCandidato3.coordenada[0]
+    y3 = objetoCandidato3.coordenada[1]
+
+    pendiente1 = calcularPendiente(x1,y1,x2,y2)
+    pendiente2 = calcularPendiente(x2,y2,x3,y3)
+    pendiente3 = calcularPendiente(x1,y1,x3,y3)
+
+    if (pendiente2 >0):
+        if((((pendiente1/pendiente2)*100) > 90 and ((pendiente1/pendiente2)*100) < 110)):
+            if (pendiente3 >0):
+                if((((pendiente1/pendiente3)*100) > 90 and ((pendiente1/pendiente3)*100) < 110)):
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+
+def calcularPendiente(x1,y1,x2,y2):
+    pendiente=0
+    if (y2>y1):
+        deltaY1 = (y2-y1)
+    else:
+        deltaY1 = (y1-y2)
+    
+    if (x2>x1):
+        deltaX1 = (x2-x1)
+    else:
+        deltaX1 = (x1-x2)
+
+    if(deltaX1 >0):
+        pendiente = deltaY1/deltaX1
+
+    return pendiente
 
 class ObjetoCandidatoClass():
-    def __init__(self, posicion, angulo):
+    def __init__(self, posicion, angulo, x, y):
         self.posicion = posicion
         self.angulo = angulo
+        self.coordenada = [x,y]
+
+class CaracterMetricas():
+    def __init__(self, ancho, alto, boundarieXContiguo, porcentajeDistanciaBordeInferiorImagen, posicionArray, x1, x2, y1, y2):
+        self.ancho = ancho
+        self.alto = alto
+        self.tieneCaracteresPorDentro = []
+        self.boundarieXContiguo = boundarieXContiguo
+        self.porcentajeDistanciaBordeInferiorImagen = porcentajeDistanciaBordeInferiorImagen
+        self.posicionArray = posicionArray
+        self.hayMasIgualAnchos = 0
+        self.hayMasIgualAltos = 0
+        self.hayMasSimilarUbicacionY = 0
+        self.x1 = x1
+        self.x2 = x2
+        self.y1 = y1
+        self.y2 = y2

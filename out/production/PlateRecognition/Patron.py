@@ -267,7 +267,7 @@ def buscarPatron(colorDetectado,fotoOriginal,ancho,alto):
             x2 = float(max(borde_placa[:,:,1]))
             resultado=1
             rect = cv2.minAreaRect(borde_placa)
-            box = cv2.cv.BoxPoints(rect)
+            box = cv2.boxPoints(rect)
             box = numpy.int0(box)
             punto1x,punto1y,punto2x,punto2y,punto3x,punto3y,punto4x,punto4y,direccion=hallar_esquinas(box,borde_placa,int(x1))
 

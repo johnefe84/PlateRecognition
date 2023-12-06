@@ -9,11 +9,13 @@ samplesl = np.loadtxt(os.path.join(sys.path[0], "templates/letrasamples.data"), 
 responsesl = np.loadtxt(os.path.join(sys.path[0], "templates/letrasresponses.data"),np.float32)
 samplesn = np.loadtxt(os.path.join(sys.path[0], "templates/numerosamples.data"),np.float32)
 responsesn = np.loadtxt(os.path.join(sys.path[0], "templates/numerosresponses.data"),np.float32)
-FotoOriginal = cv2.imread('/Users/john.ruiz/placa3.jpg')
+FotoOriginal = cv2.imread('/Users/john.ruiz/placa2.jpg')
 out = np.zeros(FotoOriginal.shape,np.uint8)
 gray = cv2.cvtColor(FotoOriginal,cv2.COLOR_BGR2GRAY)
 height,width= gray.shape
+
 placas=Placas.Placas()
+
 pletras = None
 pnumeros = None
 tipoCamara = "IP"

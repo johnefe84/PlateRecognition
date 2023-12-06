@@ -8,3 +8,9 @@ I did this code in the 2009 year. Nowadays there is a lot of improvements can be
 can contact me on my LinkedIn profile at:
 https://www.linkedin.com/in/johnefe/
 
+To run the program you need to install the folowings modules using pip:
+
+pip install pyqt5
+pip install opencv-python
+pip install scipy
+pip install --only-binary :all: mysqlclient
